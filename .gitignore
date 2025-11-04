@@ -1,0 +1,87 @@
+# === Global ignores ===
+.DS_Store
+Thumbs.db
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+package-lock.json
+yarn.lock
+
+# === Environment Files ===
+.env
+.env.local
+.env.development
+.env.production
+.env.test
+
+# === OS & Editor ===
+.vscode/
+.idea/
+*.swp
+*.swo
+*.swn
+*.tmp
+
+# === Node ===
+node_modules/
+dist/
+build/
+coverage/
+.next/
+out/
+.cache/
+.vercel/
+.npm/
+.pnpm-store/
+
+# === Frontend (Next.js) ===
+frontend/.next/
+frontend/node_modules/
+frontend/.turbo/
+frontend/.vercel/
+frontend/.env*
+frontend/dist/
+frontend/out/
+frontend/.cache/
+frontend/.eslintcache
+
+# === Backend (Express / Sequelize) ===
+backend/node_modules/
+backend/dist/
+backend/.env*
+backend/.cache/
+backend/tmp/
+backend/logs/
+backend/uploads/
+
+# === Database & Misc ===
+*.sqlite
+*.sqlite3
+*.db
+*.sql
+*.bak
+*.seed
+dump.rdb
+
+# === Testing ===
+coverage/
+jest-cache/
+jest-html-reporters-*
+reports/
+playwright-report/
+test-results/
+
+# === Temporary ===
+*.pid
+*.seed
+*.pid.lock
+*.tgz
+*.tar.gz
+
+# === MacOS / Windows ===
+.DS_Store
+ehthumbs.db
+Icon?
+Desktop.ini
