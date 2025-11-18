@@ -44,6 +44,7 @@ export const createSoal = async (req, res) => {
   try {
     const {
       id_ujian,
+      id_kriteria,
       pertanyaan,
       opsi_a,
       opsi_b,
@@ -54,6 +55,7 @@ export const createSoal = async (req, res) => {
 
     if (
       !id_ujian ||
+      !id_kriteria ||
       !pertanyaan ||
       !opsi_a ||
       !opsi_b ||
@@ -66,6 +68,7 @@ export const createSoal = async (req, res) => {
 
     const newSoal = await Soal.create({
       id_ujian,
+      id_kriteria,
       pertanyaan,
       opsi_a,
       opsi_b,

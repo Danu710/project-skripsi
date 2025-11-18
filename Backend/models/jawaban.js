@@ -10,36 +10,43 @@ const Jawaban = sequelize.define(
       primaryKey: true,
       autoIncrement: true,
     },
+
     id_siswa: {
       type: DataTypes.INTEGER,
       allowNull: false,
       references: { model: 'siswa', key: 'id_siswa' },
       onDelete: 'CASCADE',
+      onUpdate: 'CASCADE',
     },
+
     id_soal: {
       type: DataTypes.INTEGER,
       allowNull: false,
       references: { model: 'soal', key: 'id_soal' },
       onDelete: 'CASCADE',
+      onUpdate: 'CASCADE',
     },
+
     id_ujian: {
       type: DataTypes.INTEGER,
       allowNull: false,
       references: { model: 'ujian', key: 'id_ujian' },
       onDelete: 'CASCADE',
+      onUpdate: 'CASCADE',
     },
+
     jawaban_text: {
-      type: DataTypes.TEXT,
+      type: DataTypes.STRING,
       allowNull: false,
-    },
-    is_benar: {
-      type: DataTypes.BOOLEAN,
-      defaultValue: false,
+      validate: {
+        isIn: [['A', 'B', 'C', 'D']], // opsional → MCQ only
+      },
     },
   },
   {
     tableName: 'jawaban',
-    timestamps: true,
+    timestamps: false,
+    underscored: true, // optional agar konsisten
   }
 );
 

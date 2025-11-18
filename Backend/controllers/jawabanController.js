@@ -5,12 +5,14 @@ const { Jawaban, Siswa, Soal, Ujian } = db;
 /* -------------------- CREATE -------------------- */
 export const createJawaban = async (req, res) => {
   try {
-    const { id_siswa, id_soal, id_ujian, jawaban_text, is_benar } = req.body;
+    const { id_siswa, id_soal, id_ujian, jawaban_text } = req.body;
 
-    if (!id_siswa || !id_soal || !id_ujian) {
+    if (!id_siswa || !id_soal || !id_ujian || !jawaban_text) {
       return res
         .status(400)
-        .json({ message: 'id_siswa, id_soal, dan id_ujian wajib diisi' });
+        .json({
+          message: 'id_siswa, id_soal, id_ujian, dan jawaban_text wajib diisi',
+        });
     }
 
     const newJawaban = await Jawaban.create({
@@ -18,7 +20,6 @@ export const createJawaban = async (req, res) => {
       id_soal,
       id_ujian,
       jawaban_text,
-      is_benar,
     });
 
     res.status(201).json({

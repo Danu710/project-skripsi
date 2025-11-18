@@ -10,20 +10,34 @@ const Soal = sequelize.define(
       primaryKey: true,
       autoIncrement: true,
     },
+
     id_ujian: {
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
-        model: 'ujian', // nama tabel di database
+        model: 'ujian',
         key: 'id_ujian',
       },
       onDelete: 'CASCADE',
       onUpdate: 'CASCADE',
     },
+
+    id_kriteria: {
+      type: DataTypes.INTEGER,
+      allowNull: false, // wajib karena soal pasti punya kriteria
+      references: {
+        model: 'kriteria',
+        key: 'id_kriteria',
+      },
+      onDelete: 'SET NULL', // boleh diganti CASCADE jika ingin ikut terhapus
+      onUpdate: 'CASCADE',
+    },
+
     pertanyaan: {
       type: DataTypes.TEXT,
       allowNull: false,
     },
+
     opsi_a: {
       type: DataTypes.STRING,
       allowNull: false,
@@ -40,18 +54,19 @@ const Soal = sequelize.define(
       type: DataTypes.STRING,
       allowNull: false,
     },
+
     jawaban_benar: {
       type: DataTypes.STRING,
       allowNull: false,
       validate: {
-        isIn: [['A', 'B', 'C', 'D']], // biar jawaban cuma A/B/C/D
+        isIn: [['A', 'B', 'C', 'D']],
       },
     },
   },
   {
     tableName: 'soal',
-    timestamps: true, // createdAt & updatedAt
-    underscored: true, // pakai snake_case
+    timestamps: true,
+    underscored: true,
   }
 );
 
