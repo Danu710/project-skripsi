@@ -37,6 +37,10 @@ const Nilai = sequelize.define(
       type: DataTypes.FLOAT,
       allowNull: true,
     },
+    detail_nilai: {
+      type: DataTypes.JSON,
+      allowNull: true,
+    },
 
     ranking: {
       type: DataTypes.INTEGER,

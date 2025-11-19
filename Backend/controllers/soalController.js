@@ -1,6 +1,6 @@
 // controllers/soalController.js
 import db from '../models/index.js';
-const { Soal, Ujian } = db;
+const { Soal, Ujian, Kriteria, Subkriteria } = db;
 
 export const getAllSoal = async (req, res) => {
   try {
@@ -53,6 +53,9 @@ export const createSoal = async (req, res) => {
       jawaban_benar,
     } = req.body;
 
+    // =============================
+    // 1. VALIDASI FIELD WAJIB
+    // =============================
     if (
       !id_ujian ||
       !id_kriteria ||
@@ -66,6 +69,17 @@ export const createSoal = async (req, res) => {
       return res.status(400).json({ message: 'Semua field wajib diisi' });
     }
 
+    // =============================
+    // 2. CEK APAKAH KRITERIA ADA
+    // =============================
+    const cekKriteria = await Kriteria.findByPk(id_kriteria);
+    if (!cekKriteria) {
+      return res.status(400).json({ message: 'Kriteria tidak ditemukan' });
+    }
+
+    // =============================
+    // 3. SIMPAN SOAL
+    // =============================
     const newSoal = await Soal.create({
       id_ujian,
       id_kriteria,
@@ -77,9 +91,10 @@ export const createSoal = async (req, res) => {
       jawaban_benar,
     });
 
-    res
-      .status(201)
-      .json({ message: 'Soal berhasil ditambahkan', data: newSoal });
+    return res.status(201).json({
+      message: 'Soal berhasil ditambahkan',
+      data: newSoal,
+    });
   } catch (error) {
     console.error('❌ Error createSoal:', error);
     res.status(500).json({ message: 'Gagal menambah soal', error });

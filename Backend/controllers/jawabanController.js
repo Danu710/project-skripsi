@@ -5,29 +5,40 @@ const { Jawaban, Siswa, Soal, Ujian } = db;
 /* -------------------- CREATE -------------------- */
 export const createJawaban = async (req, res) => {
   try {
-    const { id_siswa, id_soal, id_ujian, jawaban_text } = req.body;
+    const { id_soal, id_siswa, id_ujian, jawaban_text } = req.body;
 
-    if (!id_siswa || !id_soal || !id_ujian || !jawaban_text) {
-      return res
-        .status(400)
-        .json({
-          message: 'id_siswa, id_soal, id_ujian, dan jawaban_text wajib diisi',
-        });
+    // Validasi input
+    if (!id_soal || !id_siswa || !id_ujian || !jawaban_text) {
+      return res.status(400).json({ message: 'Semua field wajib diisi' });
     }
 
+    // Cek apakah soal ada
+    const soal = await Soal.findByPk(id_soal);
+    if (!soal) {
+      return res.status(404).json({ message: 'Soal tidak ditemukan' });
+    }
+
+    // Cek apakah siswa ada (opsional)
+    const siswa = await Siswa.findByPk(id_siswa);
+    if (!siswa) {
+      return res.status(404).json({ message: 'Siswa tidak ditemukan' });
+    }
+
+    // Simpan jawaban
     const newJawaban = await Jawaban.create({
-      id_siswa,
       id_soal,
+      id_siswa,
       id_ujian,
       jawaban_text,
     });
 
     res.status(201).json({
-      message: 'Jawaban berhasil dibuat',
+      message: 'Jawaban berhasil disimpan',
       data: newJawaban,
     });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    console.error('❌ Error createJawaban:', error);
+    res.status(500).json({ message: 'Gagal menyimpan jawaban', error });
   }
 };
 

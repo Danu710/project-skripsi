@@ -6,200 +6,459 @@ const { Siswa, Ujian, Jawaban, Nilai, Kriteria, Subkriteria, Soal } = db;
 /* =====================================================
    1. PROSES SAW UNTUK SATU UJIAN
 ===================================================== */
+
+import { Op } from 'sequelize';
+
 // export const prosesSAW = async (req, res) => {
 //   try {
 //     const { id_ujian } = req.body;
 
-//     // 1. Ambil kriteria
-//     const kriteria = await Kriteria.findAll({
-//       include: [{ model: Subkriteria }],
-//       order: [['id_kriteria', 'ASC']],
-//     });
-
-//     if (kriteria.length === 0) {
-//       return res.status(400).json({ message: 'Kriteria belum dibuat' });
+//     if (!id_ujian) {
+//       return res.status(400).json({ message: 'id_ujian wajib diisi' });
 //     }
 
-//     // 2. Ambil semua siswa yang mengerjakan ujian ini
-//     const jawabanSiswa = await Jawaban.findAll({
+//     // ================================
+//     // 1. Ambil semua jawaban dan soal terkait ujian
+//     // ================================
+//     const jawabanData = await Jawaban.findAll({
 //       where: { id_ujian },
 //       include: [
-//         { model: Siswa, attributes: ['id_siswa', 'nama_siswa'] },
-//         { model: Ujian, attributes: ['id_ujian'] },
+//         {
+//           model: Soal,
+//           include: [
+//             {
+//               model: Kriteria, // untuk Soal -> Kriteria
+//             },
+//           ],
+//         },
+//         { model: Siswa },
 //       ],
 //     });
 
-//     if (jawabanSiswa.length === 0) {
+//     if (!jawabanData.length) {
 //       return res
-//         .status(400)
-//         .json({ message: 'Tidak ada siswa yang mengerjakan ujian' });
+//         .status(404)
+//         .json({ message: 'Tidak ada jawaban untuk ujian ini' });
 //     }
 
-//     // Kelompokkan jawaban berdasarkan siswa
-//     const nilaiMatrix = {}; // { id_siswa: { C1: value, C2: value, ... } }
+//     // ================================
+//     // 2. Hitung nilai subkriteria per siswa per kriteria
+//     // ================================
+//     const siswaMap = {}; // { id_siswa: { C1: nilai, C2: nilai, ... } }
 
-//     jawabanSiswa.forEach((jwb) => {
-//       const id_siswa = jwb.id_siswa;
+//     for (const jawaban of jawabanData) {
+//       const { id_siswa, jawaban_text, Soal: soal, Siswa: siswaObj } = jawaban;
+//       const kriteria = soal.Kriteria;
+//       if (!kriteria) continue; // safety check
+//       const kode = kriteria.kode; // C1, C2, ...
 
-//       if (!nilaiMatrix[id_siswa]) {
-//         nilaiMatrix[id_siswa] = {};
-//       }
+//       if (!siswaMap[id_siswa])
+//         siswaMap[id_siswa] = {
+//           id_siswa,
+//           nama_siswa: siswaObj.nama_siswa,
+//           nilai: {},
+//         };
 
-//       // Mapping nilai jawaban → Subkriteria (contoh: nilai benar = 1, salah = 0)
-//       // Kamu bisa sesuaikan logika konversinya
-//       const score = jwb.is_benar ? 1 : 0;
+//       // cek jawaban benar atau salah
+//       const benar = jawaban_text === soal.jawaban_benar ? 1 : 0;
 
-//       const id_kriteria = jwb.Soal?.id_kriteria;
-//       if (id_kriteria) {
-//         nilaiMatrix[id_siswa][id_kriteria] =
-//           (nilaiMatrix[id_siswa][id_kriteria] || 0) + score;
-//       }
-//     });
-
-//     // 3. Normalisasi Matriks
-//     const normalisasiMatrix = {};
-//     kriteria.forEach((k) => {
-//       const id_kriteria = k.id_kriteria;
-//       const values = Object.values(nilaiMatrix).map((m) => m[id_kriteria] || 0);
-
-//       const max = Math.max(...values);
-//       const min = Math.min(...values);
-
-//       for (const id_siswa in nilaiMatrix) {
-//         const nilai = nilaiMatrix[id_siswa][id_kriteria] || 0;
-
-//         if (!normalisasiMatrix[id_siswa]) normalisasiMatrix[id_siswa] = {};
-
-//         normalisasiMatrix[id_siswa][id_kriteria] =
-//           k.tipe === 'benefit'
-//             ? max === 0
-//               ? 0
-//               : nilai / max // benefit
-//             : nilai === 0
-//             ? 0
-//             : min / nilai; // cost
-//       }
-//     });
-
-//     // 4. Hitung total nilai SAW
-//     const hasilAkhir = [];
-
-//     for (const id_siswa in normalisasiMatrix) {
-//       let total = 0;
-
-//       kriteria.forEach((k) => {
-//         const normVal = normalisasiMatrix[id_siswa][k.id_kriteria] || 0;
-//         total += normVal * k.bobot;
-//       });
-
-//       hasilAkhir.push({
-//         id_siswa,
-//         total_nilai: parseFloat(total.toFixed(4)),
-//       });
+//       if (!siswaMap[id_siswa].nilai[kode]) siswaMap[id_siswa].nilai[kode] = 0;
+//       siswaMap[id_siswa].nilai[kode] += benar;
 //     }
 
-//     // 5. Urutkan ranking
-//     hasilAkhir.sort((a, b) => b.total_nilai - a.total_nilai);
-
-//     hasilAkhir.forEach((item, index) => {
-//       item.ranking = index + 1;
+//     // ================================
+//     // 3. Ambil subkriteria untuk semua kriteria
+//     // ================================
+//     const subkriteriaAll = await Subkriteria.findAll({
+//       include: [{ model: Kriteria, as: 'kriteria' }], // pakai alias
 //     });
 
-//     // 6. Simpan ke tabel nilai
-//     await Nilai.destroy({ where: { id_ujian } });
+//     // ================================
+//     // 4. Tentukan subkriteria tiap siswa per kriteria
+//     // ================================
+//     for (const siswa of Object.values(siswaMap)) {
+//       for (const [kode, totalBenar] of Object.entries(siswa.nilai)) {
+//         const subList = subkriteriaAll.filter(
+//           (sk) => sk.kriteria.kode === kode
+//         );
 
-//     for (const item of hasilAkhir) {
-//       await Nilai.create({
-//         id_siswa: item.id_siswa,
+//         const sub = subList
+//           .sort((a, b) => b.nilai - a.nilai)
+//           .find((sk) => {
+//             if (kode === 'C4') {
+//               // Cost
+//               if (totalBenar <= 0 && sk.nama_subkriteria.includes('0'))
+//                 return true;
+//               if (totalBenar <= 2 && sk.nama_subkriteria.includes('1–2'))
+//                 return true;
+//               if (totalBenar > 2 && sk.nama_subkriteria.includes('>2'))
+//                 return true;
+//             } else {
+//               // Benefit
+//               const persen = (totalBenar / subList.length) * 100;
+//               if (sk.nama_subkriteria.includes('90') && persen >= 90)
+//                 return true;
+//               if (sk.nama_subkriteria.includes('80') && persen >= 80)
+//                 return true;
+//               if (sk.nama_subkriteria.includes('70') && persen >= 70)
+//                 return true;
+//               if (sk.nama_subkriteria.includes('10') && persen >= 10)
+//                 return true;
+//             }
+//             return false;
+//           });
+
+//         siswa.nilai[kode] = sub ? sub.nilai : 0;
+//       }
+//     }
+
+//     // ================================
+//     // 5. Normalisasi matriks keputusan
+//     // ================================
+//     const kriteriaAll = await Kriteria.findAll();
+//     const maxPerKriteria = {};
+//     for (const k of kriteriaAll) {
+//       const kode = k.kode;
+//       maxPerKriteria[kode] = Math.max(
+//         ...Object.values(siswaMap).map((s) => s.nilai[kode] || 0)
+//       );
+//     }
+
+//     // ================================
+//     // 6. Hitung total nilai SAW per siswa
+//     // ================================
+//     for (const siswa of Object.values(siswaMap)) {
+//       let totalNilai = 0;
+//       const detail = {};
+//       for (const k of kriteriaAll) {
+//         const kode = k.kode;
+//         const nilai = siswa.nilai[kode] || 0;
+//         const normalisasi = maxPerKriteria[kode]
+//           ? nilai / maxPerKriteria[kode]
+//           : 0;
+//         totalNilai += normalisasi * parseFloat(k.bobot);
+//         detail[kode] = normalisasi;
+//       }
+//       siswa.detail_nilai = detail;
+//       siswa.total_nilai = totalNilai;
+//     }
+
+//     // ================================
+//     // 7. Ranking siswa
+//     // ================================
+//     const sortedSiswa = Object.values(siswaMap).sort(
+//       (a, b) => b.total_nilai - a.total_nilai
+//     );
+//     sortedSiswa.forEach((s, i) => (s.ranking = i + 1));
+
+//     // ================================
+//     // 8. Simpan ke  DB tabel Nilai
+//     // ================================
+//     for (const s of sortedSiswa) {
+//       await Nilai.upsert({
+//         id_siswa: s.id_siswa,
 //         id_ujian,
-//         total_nilai: item.total_nilai,
-//         ranking: item.ranking,
+//         total_nilai: s.total_nilai,
+//         detail_nilai: s.detail_nilai,
+//         ranking: s.ranking,
 //       });
 //     }
 
-//     res.json({
-//       message: 'Perhitungan SAW berhasil',
-//       hasil: hasilAkhir,
+//     return res.status(200).json({
+//       message: 'Perhitungan SAW selesai',
+//       data: sortedSiswa,
 //     });
-//   } catch (err) {
-//     console.error(err);
-//     res.status(500).json({ error: err.message });
+//   } catch (error) {
+//     console.error('❌ Error prosesSAW:', error);
+//     return res.status(500).json({ message: 'Gagal menghitung SAW', error });
+//   }
+// };
+
+// export const prosesSAW = async (req, res) => {
+//   console.log('🚀 Memulai proses SAW...');
+
+//   try {
+//     const { id_ujian } = req.body;
+//     console.log('📌 id_ujian diterima:', id_ujian);
+
+//     if (!id_ujian) {
+//       console.log('❌ id_ujian tidak diberikan');
+//       return res.status(400).json({ message: 'id_ujian wajib diisi' });
+//     }
+
+//     // 1️⃣ Ambil semua jawaban dan soal terkait ujian
+//     console.log('📌 Mengambil data jawaban dan soal...');
+//     const jawabanData = await Jawaban.findAll({
+//       where: { id_ujian },
+//       include: [
+//         {
+//           model: Soal,
+//           include: [
+//             Kriteria,
+//             Subkriteria, // subkriteria otomatis include Kriteria kalau dibutuhkan nanti
+//           ],
+//         },
+//         Siswa,
+//       ],
+//     });
+//     console.log(`✅ Jumlah jawaban ditemukan: ${jawabanData.length}`);
+
+//     if (!jawabanData.length) {
+//       console.log('❌ Tidak ada jawaban untuk ujian ini');
+//       return res
+//         .status(404)
+//         .json({ message: 'Tidak ada jawaban untuk ujian ini' });
+//     }
+
+//     // 2️⃣ Hitung nilai subkriteria per siswa per kriteria
+//     console.log('📌 Menghitung nilai subkriteria per siswa...');
+//     const siswaMap = {};
+
+//     for (const jawaban of jawabanData) {
+//       const { id_siswa, jawaban_text, Soal: soal } = jawaban;
+//       const kriteria = soal.kriteria;
+//       console.log('DEBUG Soal:', soal.id_soal, 'kriteria =', soal.id_kriteria);
+
+//       if (!kriteria) {
+//         console.log(`⚠️ Soal ${soal.id_soal} tidak memiliki kriteria`);
+//         continue;
+//       }
+//       const kode = kriteria.kode;
+
+//       if (!siswaMap[id_siswa]) {
+//         siswaMap[id_siswa] = {
+//           id_siswa,
+//           nama_siswa: jawaban.Siswa.nama,
+//           nilai: {},
+//         };
+//       }
+
+//       const benar = jawaban_text === soal.jawaban_benar ? 1 : 0;
+//       if (!siswaMap[id_siswa].nilai[kode]) siswaMap[id_siswa].nilai[kode] = 0;
+//       siswaMap[id_siswa].nilai[kode] += benar;
+//     }
+//     console.log('✅ Nilai per siswa berhasil dihitung');
+//     console.log('siswaMap:', siswaMap);
+
+//     // 3️⃣ Ambil subkriteria untuk semua kriteria
+//     console.log('📌 Mengambil semua subkriteria...');
+//     const subkriteriaAll = await Subkriteria.findAll({
+//       include: [{ model: Kriteria }],
+//     });
+//     console.log(`✅ Jumlah subkriteria ditemukan: ${subkriteriaAll.length}`);
+
+//     // 4️⃣ Tentukan subkriteria tiap siswa per kriteria
+//     console.log('📌 Menentukan subkriteria tiap siswa...');
+//     for (const siswa of Object.values(siswaMap)) {
+//       for (const [kode, totalBenar] of Object.entries(siswa.nilai)) {
+//         const subList = subkriteriaAll.filter(
+//           (sk) => sk.kriteria.kode === kode
+//         );
+//         const sub = subList
+//           .sort((a, b) => b.nilai - a.nilai)
+//           .find((sk) => {
+//             if (kode === 'C4') {
+//               if (totalBenar <= 0 && sk.nama_subkriteria.includes('0'))
+//                 return true;
+//               if (totalBenar <= 2 && sk.nama_subkriteria.includes('1–2'))
+//                 return true;
+//               if (totalBenar > 2 && sk.nama_subkriteria.includes('>2'))
+//                 return true;
+//             } else {
+//               const persen = (totalBenar / subList.length) * 100;
+//               if (sk.nama_subkriteria.includes('90') && persen >= 90)
+//                 return true;
+//               if (sk.nama_subkriteria.includes('80') && persen >= 80)
+//                 return true;
+//               if (sk.nama_subkriteria.includes('70') && persen >= 70)
+//                 return true;
+//               if (sk.nama_subkriteria.includes('10') && persen >= 10)
+//                 return true;
+//             }
+//             return false;
+//           });
+//         siswa.nilai[kode] = sub ? sub.nilai : 0;
+//       }
+//     }
+//     console.log('✅ Subkriteria siswa berhasil ditentukan');
+
+//     // 5️⃣ Normalisasi matriks keputusan
+//     console.log('📌 Melakukan normalisasi matriks keputusan...');
+//     const kriteriaAll = await Kriteria.findAll();
+//     const maxPerKriteria = {};
+//     for (const k of kriteriaAll) {
+//       const kode = k.kode;
+//       maxPerKriteria[kode] = Math.max(
+//         ...Object.values(siswaMap).map((s) => s.nilai[kode] || 0)
+//       );
+//     }
+//     console.log('✅ Normalisasi berhasil, maxPerKriteria:', maxPerKriteria);
+
+//     // 6️⃣ Hitung total nilai SAW & buat detail_nilai
+//     console.log('📌 Menghitung total nilai SAW dan detail nilai...');
+//     for (const siswa of Object.values(siswaMap)) {
+//       let totalNilai = 0;
+//       const detail = {};
+//       for (const k of kriteriaAll) {
+//         const kode = k.kode;
+//         const nilai = siswa.nilai[kode] || 0;
+//         const normalisasi = maxPerKriteria[kode]
+//           ? nilai / maxPerKriteria[kode]
+//           : 0;
+//         totalNilai += normalisasi * parseFloat(k.bobot);
+//         detail[kode] = parseFloat(normalisasi.toFixed(4));
+//       }
+//       siswa.total_nilai = parseFloat(totalNilai.toFixed(4));
+//       siswa.detail_nilai = detail;
+//       console.log('====================');
+//       console.log('Siswa:', siswa.nama_siswa);
+//       console.log('Detail Nilai:', detail);
+//       console.log('Total Nilai SAW:', siswa.total_nilai);
+//       console.log('====================\n');
+//     }
+
+//     // 7️⃣ Ranking siswa
+//     console.log('📌 Menentukan ranking siswa...');
+//     const sortedSiswa = Object.values(siswaMap).sort(
+//       (a, b) => b.total_nilai - a.total_nilai
+//     );
+//     sortedSiswa.forEach((s, i) => (s.ranking = i + 1));
+//     console.log('✅ Ranking selesai');
+
+//     // 8️⃣ Simpan ke tabel Nilai
+//     console.log('📌 Menyimpan data ke tabel Nilai...');
+//     for (const s of sortedSiswa) {
+//       await Nilai.upsert({
+//         id_siswa: s.id_siswa,
+//         id_ujian,
+//         total_nilai: s.total_nilai,
+//         detail_nilai: s.detail_nilai,
+//         ranking: s.ranking,
+//       });
+//       console.log(`💾 Nilai siswa ${s.nama_siswa} disimpan`);
+//     }
+
+//     console.log('🎉 Perhitungan SAW selesai');
+
+//     return res.status(200).json({
+//       message: 'Perhitungan SAW selesai',
+//       data: sortedSiswa,
+//     });
+//   } catch (error) {
+//     console.error('❌ Error prosesSAW:', error);
+//     return res.status(500).json({ message: 'Gagal menghitung SAW', error });
 //   }
 // };
 
 export const prosesSAW = async (req, res) => {
+  console.log('🚀 Mulai proses SAW...');
+
   try {
     const { id_ujian } = req.body;
+    if (!id_ujian)
+      return res.status(400).json({ message: 'id_ujian wajib diisi' });
 
-    // 1. Ambil semua kriteria beserta bobot
-    const kriteria = await Kriteria.findAll({
-      order: [['id_kriteria', 'ASC']],
-    });
-
-    if (!kriteria.length)
-      return res.status(400).json({ message: 'Kriteria belum dibuat' });
-
-    // 2. Ambil semua jawaban siswa beserta Soal dan jawaban_benar
-    const jawabanSiswa = await Jawaban.findAll({
+    // 1️⃣ Ambil semua jawaban + soal + subkriteria + kriteria + siswa
+    const jawabanData = await Jawaban.findAll({
       where: { id_ujian },
       include: [
-        { model: Siswa, attributes: ['id_siswa', 'nama_siswa'] },
         {
           model: Soal,
-          attributes: ['id_soal', 'id_kriteria', 'jawaban_benar'],
+          include: [{ model: Subkriteria, include: [Kriteria] }, Kriteria],
         },
+        Siswa,
       ],
     });
 
-    if (!jawabanSiswa.length)
-      return res.status(400).json({ message: 'Tidak ada jawaban siswa' });
+    if (!jawabanData.length)
+      return res.status(404).json({ message: 'Tidak ada jawaban' });
 
-    // 3. Hitung total nilai per siswa (Simple Additive Weighting)
-    const totalNilaiPerSiswa = {}; // { id_siswa: total_nilai }
+    // Struktur nilai siswa
+    const siswaMap = {};
 
-    jawabanSiswa.forEach((jwb) => {
-      const id_siswa = jwb.id_siswa;
-      const id_kriteria = jwb.Soal?.id_kriteria;
-      const jawabanBenar = jwb.Soal?.jawaban_benar;
+    // 2️⃣ Kumpulkan nilai mentah subkriteria per siswa
+    for (const j of jawabanData) {
+      const { id_siswa, jawaban_text, Siswa: siswa, Soal: soal } = j;
 
-      if (!id_kriteria || !jawabanBenar) return; // skip jika data tidak lengkap
+      if (!siswaMap[id_siswa]) {
+        siswaMap[id_siswa] = {
+          id_siswa,
+          nama_siswa: siswa.nama,
+          nilai: {}, // per kriteria
+        };
+      }
 
-      const k = kriteria.find((k) => k.id_kriteria === id_kriteria);
-      if (!k) return;
+      // Jika jawaban benar → ambil nilai_subkriteria dari soal
+      const nilaiSub =
+        jawaban_text === soal.jawaban_benar ? soal.Subkriterium.nilai : 0;
 
-      if (!totalNilaiPerSiswa[id_siswa]) totalNilaiPerSiswa[id_siswa] = 0;
+      const kode = soal.Kriterium.kode;
 
-      // Tambahkan bobot jika jawaban benar, 0 jika salah
-      totalNilaiPerSiswa[id_siswa] +=
-        jwb.jawaban_text === jawabanBenar ? k.bobot : 0;
-    });
+      if (!siswaMap[id_siswa].nilai[kode]) siswaMap[id_siswa].nilai[kode] = 0;
 
-    // 4. Buat array hasil dan ranking
-    const hasilAkhir = Object.entries(totalNilaiPerSiswa)
-      .map(([id_siswa, total_nilai]) => ({
-        id_siswa: parseInt(id_siswa),
-        total_nilai,
-      }))
-      .sort((a, b) => b.total_nilai - a.total_nilai);
+      siswaMap[id_siswa].nilai[kode] += nilaiSub;
+    }
 
-    hasilAkhir.forEach((item, idx) => (item.ranking = idx + 1));
+    // 3️⃣ Ambil semua kriteria (dibutuhkan untuk bobot)
+    const kriteriaAll = await Kriteria.findAll();
 
-    // 5. Simpan ke tabel Nilai
-    await Nilai.destroy({ where: { id_ujian } }); // reset nilai lama
+    // 4️⃣ Hitung nilai max untuk normalisasi
+    const maxPerKriteria = {};
+    for (const k of kriteriaAll) {
+      const kode = k.kode;
+      maxPerKriteria[kode] = Math.max(
+        ...Object.values(siswaMap).map((s) => s.nilai[kode] || 0)
+      );
+    }
 
-    for (const item of hasilAkhir) {
-      await Nilai.create({
-        id_siswa: item.id_siswa,
-        id_ujian,
-        total_nilai: item.total_nilai,
-        ranking: item.ranking,
+    // 5️⃣ Hitung nilai total SAW per siswa
+    const result = [];
+    for (const s of Object.values(siswaMap)) {
+      let total = 0;
+      const detail = {};
+
+      for (const k of kriteriaAll) {
+        const kode = k.kode;
+        const bobot = parseFloat(k.bobot);
+        const nilai = s.nilai[kode] || 0;
+        const max = maxPerKriteria[kode] || 1;
+
+        // Normalisasi SAW
+        const norm = nilai / max;
+
+        detail[kode] = parseFloat(norm.toFixed(4));
+        total += norm * bobot;
+      }
+
+      result.push({
+        ...s,
+        detail_nilai: detail,
+        total_nilai: parseFloat(total.toFixed(4)),
       });
     }
 
-    res.json({ message: 'Perhitungan SAW berhasil', hasil: hasilAkhir });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: err.message });
+    // 6️⃣ Ranking
+    result.sort((a, b) => b.total_nilai - a.total_nilai);
+    result.forEach((s, i) => (s.ranking = i + 1));
+
+    // 7️⃣ Simpan
+    for (const s of result) {
+      await Nilai.upsert({
+        id_siswa: s.id_siswa,
+        id_ujian,
+        total_nilai: s.total_nilai,
+        detail_nilai: s.detail_nilai,
+        ranking: s.ranking,
+      });
+    }
+
+    return res.status(200).json({
+      message: 'Perhitungan SAW selesai',
+      data: result,
+    });
+  } catch (error) {
+    console.error('❌ Error prosesSAW:', error);
+    return res.status(500).json({ message: 'Gagal menghitung SAW', error });
   }
 };
 

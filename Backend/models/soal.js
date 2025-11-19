@@ -1,4 +1,3 @@
-// models/soal.js
 import { DataTypes } from 'sequelize';
 import sequelize from '../config/db.js';
 
@@ -24,12 +23,12 @@ const Soal = sequelize.define(
 
     id_kriteria: {
       type: DataTypes.INTEGER,
-      allowNull: false, // wajib karena soal pasti punya kriteria
+      allowNull: false,
       references: {
         model: 'kriteria',
         key: 'id_kriteria',
       },
-      onDelete: 'SET NULL', // boleh diganti CASCADE jika ingin ikut terhapus
+      onDelete: 'SET NULL',
       onUpdate: 'CASCADE',
     },
 

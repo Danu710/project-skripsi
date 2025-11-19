@@ -73,11 +73,21 @@ Kriteria.hasMany(Subkriteria, {
 });
 Subkriteria.belongsTo(Kriteria, {
   foreignKey: 'id_kriteria',
-  as: 'kriteria',
 });
 
+// jika belum ada
+// Subkriteria.belongsTo(Kriteria, { foreignKey: 'id_kriteria' });
+// Kriteria.hasMany(Subkriteria, { foreignKey: 'id_kriteria' });
+
+// Soal -> Subkriteria
+Soal.belongsTo(Subkriteria, { foreignKey: 'id_subkriteria' });
+Subkriteria.hasMany(Soal, { foreignKey: 'id_subkriteria' });
+
 // Kriteria — Soal (1:N)
-Kriteria.hasMany(Soal, { foreignKey: 'id_kriteria', onDelete: 'SET NULL' });
+Kriteria.hasMany(Soal, {
+  foreignKey: 'id_kriteria',
+  onDelete: 'SET NULL',
+});
 Soal.belongsTo(Kriteria, { foreignKey: 'id_kriteria' });
 
 /* ======================================= */
