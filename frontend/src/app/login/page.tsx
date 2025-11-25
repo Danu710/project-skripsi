@@ -36,6 +36,7 @@ export default function LoginPage() {
       return res.data;
     },
     onSuccess: (data) => {
+      localStorage.setItem('user', JSON.stringify(data.user));
       if (data.user.role === 'guru') router.push('/dashboard/guru');
       else router.push('/dashboard/siswa');
     },

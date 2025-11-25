@@ -5,7 +5,7 @@ import Kriteria from '../models/kriteria.js';
 export const getAllSubkriteria = async (req, res) => {
   try {
     const data = await Subkriteria.findAll({
-      include: [{ model: Kriteria, as: 'kriteria' }],
+      include: [{ model: Kriteria }],
     });
 
     res.json({ success: true, data });

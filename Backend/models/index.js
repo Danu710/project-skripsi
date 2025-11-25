@@ -8,10 +8,9 @@ import Ujian from './ujian.js';
 import Soal from './soal.js';
 import Jawaban from './jawaban.js';
 import Nilai from './nilai.js';
-
 import Kriteria from './kriteria.js';
 import Subkriteria from './subkriteria.js';
-
+import HasilSaw from './hasilSaw.js';
 /* =======================================
    RELASI LAMA (HARUS TETAP ADA)
 ======================================= */
@@ -52,18 +51,8 @@ Nilai.belongsTo(Siswa, { foreignKey: 'id_siswa' });
 Ujian.hasMany(Nilai, { foreignKey: 'id_ujian', onDelete: 'CASCADE' });
 Nilai.belongsTo(Ujian, { foreignKey: 'id_ujian' });
 
-// Kriteria — Nilai (1:N)
-// Kriteria.hasMany(Nilai, { foreignKey: 'id_kriteria', onDelete: 'CASCADE' });
-// Nilai.belongsTo(Kriteria, { foreignKey: 'id_kriteria' });
-
-/* 
-   ⚠️ Dihapus:
-   Subkriteria — Nilai
-   → nilai SAW hanya disimpan per-kriteria
-*/
-
 /* =======================================
-   RELASI SAW
+   RELASI SAW (BENAR)
 ======================================= */
 
 // Kriteria — Subkriteria (1:N)
@@ -75,20 +64,18 @@ Subkriteria.belongsTo(Kriteria, {
   foreignKey: 'id_kriteria',
 });
 
-// jika belum ada
-// Subkriteria.belongsTo(Kriteria, { foreignKey: 'id_kriteria' });
-// Kriteria.hasMany(Subkriteria, { foreignKey: 'id_kriteria' });
-
-// Soal -> Subkriteria
-Soal.belongsTo(Subkriteria, { foreignKey: 'id_subkriteria' });
-Subkriteria.hasMany(Soal, { foreignKey: 'id_subkriteria' });
-
 // Kriteria — Soal (1:N)
 Kriteria.hasMany(Soal, {
   foreignKey: 'id_kriteria',
   onDelete: 'SET NULL',
 });
-Soal.belongsTo(Kriteria, { foreignKey: 'id_kriteria' });
+Soal.belongsTo(Kriteria, {
+  foreignKey: 'id_kriteria',
+});
+
+// Siswa — HasilSaw (1:N)
+Siswa.hasMany(HasilSaw, { foreignKey: 'id_siswa' });
+HasilSaw.belongsTo(Siswa, { foreignKey: 'id_siswa' });
 
 /* ======================================= */
 const db = {
@@ -102,6 +89,7 @@ const db = {
   Nilai,
   Kriteria,
   Subkriteria,
+  HasilSaw,
 };
 
 export default db;
