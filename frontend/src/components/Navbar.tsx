@@ -9,6 +9,7 @@ import {
   DropdownMenu,
   DropdownItem,
   Avatar,
+  Button,
 } from '@heroui/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -35,25 +36,57 @@ export default function NavbarApp() {
 
   return (
     <Navbar isBordered maxWidth='full' className='px-6'>
-      {/* Kiri */}
+      {/* ========================== */}
+      {/*   KIRI                    */}
+      {/* ========================== */}
       <NavbarBrand>
         <p className='font-bold text-xl text-blue-600'>
-          Dashboard {user?.role === 'guru' ? 'Guru' : 'Siswa'}
+          {user ? (
+            <>Dashboard {user.role === 'guru' ? 'Guru' : 'Siswa'}</>
+          ) : (
+            'Aplikasi Pembelajaran SMK Ganesa Satria 2'
+          )}
         </p>
       </NavbarBrand>
 
-      {/* Spacer agar posisi tengah tidak terlalu jauh */}
+      {/* Spacer biar tengah gak mepet */}
       <NavbarContent className='flex-1' />
 
-      {/* Tengah */}
-      <NavbarContent className='hidden sm:flex'>
-        <h1 className='font-semibold text-lg text-gray-700'>
-          Halo, {user?.nama || 'User'}
-        </h1>
-      </NavbarContent>
+      {/* ========================== */}
+      {/*   TENGAH                   */}
+      {/* ========================== */}
+      {user && (
+        <NavbarContent className='hidden sm:flex'>
+          <h1 className='font-semibold text-lg text-gray-700'>
+            Halo, {user.nama}
+          </h1>
+        </NavbarContent>
+      )}
 
-      {/* Kanan */}
+      {/* ========================== */}
+      {/*   KANAN                    */}
+      {/* ========================== */}
       <NavbarContent justify='end'>
+        {/* Jika BELUM login */}
+        {!user && (
+          <div className='flex gap-3'>
+            <Button
+              variant='flat'
+              color='primary'
+              onPress={() => router.push('/login')}>
+              Login
+            </Button>
+
+            <Button
+              variant='ghost'
+              color='primary'
+              onPress={() => router.push('/register')}>
+              Register
+            </Button>
+          </div>
+        )}
+
+        {/* Jika SUDAH login */}
         {user && (
           <Dropdown placement='bottom-end'>
             <DropdownTrigger>

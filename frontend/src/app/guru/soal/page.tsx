@@ -58,19 +58,19 @@ export interface Ujian {
 
 export default function SoalPage() {
   const [filterUjian, setFilterUjian] = useState<number | null>(null);
-
+  const [editingSoal, setEditingSoal] = useState<Root2 | null>(null);
   const queryClient = useQueryClient();
 
   const {
     register,
     handleSubmit,
     reset,
+    setValue,
     formState: { errors },
   } = useForm<SoalSchema>({
     resolver: zodResolver(soalSchema),
   });
 
-  // Fetch otomatis
   const { data, isLoading, isError } = useQuery<Root>({
     queryKey: ['get-soal'],
     queryFn: async () => {
@@ -88,24 +88,63 @@ export default function SoalPage() {
 
   const { isOpen, onOpen, onOpenChange, onClose } = useDisclosure();
 
+  // ===== POST / PUT MUTATION =====
   const mutation = useMutation({
-    mutationFn: async (data: SoalSchema) => {
-      const res = await api.post('http://localhost:5000/api/soal', data);
-      return res.data;
+    mutationFn: async (formData: SoalSchema & { id?: number }) => {
+      if (formData.id) {
+        return api.put(
+          `http://localhost:5000/api/soal/${formData.id}`,
+          formData
+        );
+      } else {
+        return api.post('http://localhost:5000/api/soal', formData);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['get-soal'] });
       onClose();
       reset();
+      setEditingSoal(null);
     },
   });
 
-  const onSubmit = (data: SoalSchema) => mutation.mutate(data);
+  // ===== DELETE MUTATION =====
+  const deleteMutation = useMutation({
+    mutationFn: async (id: number) =>
+      api.delete(`http://localhost:5000/api/soal/${id}`),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['get-soal'] }),
+  });
+
+  const onSubmit = (data: SoalSchema) => {
+    const payload = editingSoal ? { ...data, id: editingSoal.id_soal } : data;
+    mutation.mutate(payload);
+  };
+
+  const handleEdit = (soal: Root2) => {
+    setEditingSoal(soal);
+    setValue('id_ujian', soal.id_ujian);
+    setValue('id_kriteria', soal.id_kriteria);
+    setValue('pertanyaan', soal.pertanyaan);
+    setValue('opsi_a', soal.opsi_a);
+    setValue('opsi_b', soal.opsi_b);
+    setValue('opsi_c', soal.opsi_c);
+    setValue('opsi_d', soal.opsi_d);
+    setValue('jawaban_benar', soal.jawaban_benar);
+    onOpen();
+  };
+
+  const handleDelete = (id: number) => {
+    if (confirm('Yakin ingin menghapus soal ini?')) {
+      deleteMutation.mutate(id);
+    }
+  };
+
   return (
     <div className='p-10'>
       <h1 className='text-2xl font-bold text-gray-700 text-center'>
         Daftar Soal
       </h1>
+
       <div className='my-4 flex justify-between items-center gap-4'>
         <div className='w-1/2'>
           <h1 className='font-semibold text-gray-700'>Filter Ujian:</h1>
@@ -125,29 +164,32 @@ export default function SoalPage() {
           </Select>
         </div>
         <div>
-          <Button color='primary' onPress={onOpen}>
+          <Button
+            color='primary'
+            onPress={() => {
+              setEditingSoal(null);
+              reset();
+              onOpen();
+            }}>
             Tambah Soal
           </Button>
         </div>
       </div>
 
-      {/* STATE UI */}
       {isLoading && <p className='mt-4 text-blue-600'>Loading data soal...</p>}
       {isError && (
         <p className='mt-4 text-red-600'>Gagal memuat data soal dari server.</p>
       )}
 
-      {/* DATA LIST */}
       <div className='mt-6 space-y-4'>
         {filteredData?.map((item) => (
           <div
             key={item.id_soal}
-            className='bg-white shadow p-5 rounded-lg border'>
-            <h2 className='text-lg font-semibold text-gray-800'>
-              {item.pertanyaan}
-            </h2>
-
-            <div className='mt-2 text-gray-600'>
+            className='bg-white shadow p-5 rounded-lg border flex justify-between items-start'>
+            <div>
+              <h2 className='text-lg font-semibold text-gray-800'>
+                {item.pertanyaan}
+              </h2>
               <p>
                 <strong>ID Soal:</strong> {item.id_soal}
               </p>
@@ -157,24 +199,20 @@ export default function SoalPage() {
               <p>
                 <strong>Jawaban Benar:</strong> {item.jawaban_benar}
               </p>
-
-              {/* OPSI */}
               <div className='mt-3'>
                 <p>
-                  <strong>Opsi </strong> {item.opsi_a}
+                  <strong>Opsi A:</strong> {item.opsi_a}
                 </p>
                 <p>
-                  <strong>Opsi</strong> {item.opsi_b}
+                  <strong>Opsi B:</strong> {item.opsi_b}
                 </p>
                 <p>
-                  <strong>Opsi</strong> {item.opsi_c}
+                  <strong>Opsi C:</strong> {item.opsi_c}
                 </p>
                 <p>
-                  <strong>Opsi </strong> {item.opsi_d}
+                  <strong>Opsi D:</strong> {item.opsi_d}
                 </p>
               </div>
-
-              {/* UJIAN */}
               <div className='mt-4 border-t pt-3'>
                 <p className='font-semibold text-gray-700'>Informasi Ujian</p>
                 <p>
@@ -189,16 +227,32 @@ export default function SoalPage() {
                 </p>
               </div>
             </div>
+
+            <div className='flex flex-col gap-2'>
+              <Button
+                size='sm'
+                color='success'
+                onPress={() => handleEdit(item)}>
+                Edit
+              </Button>
+              <Button
+                size='sm'
+                color='danger'
+                onPress={() => handleDelete(item.id_soal)}>
+                Hapus
+              </Button>
+            </div>
           </div>
         ))}
       </div>
 
+      {/* MODAL ADD / EDIT */}
       <Modal isOpen={isOpen} onOpenChange={onOpenChange}>
         <ModalContent>
           {(close) => (
             <>
               <ModalHeader className='text-lg font-bold'>
-                Tambah Soal Baru
+                {editingSoal ? 'Edit Soal' : 'Tambah Soal Baru'}
               </ModalHeader>
 
               <form onSubmit={handleSubmit(onSubmit)}>
@@ -206,28 +260,23 @@ export default function SoalPage() {
                   <Input
                     label='ID Ujian'
                     type='number'
-                    inputMode='numeric'
                     {...register('id_ujian')}
                     isInvalid={!!errors.id_ujian}
                     errorMessage={errors.id_ujian?.message}
                   />
-
                   <Input
                     label='ID Kriteria'
                     type='number'
-                    inputMode='numeric'
                     {...register('id_kriteria')}
                     isInvalid={!!errors.id_kriteria}
                     errorMessage={errors.id_kriteria?.message}
                   />
-
                   <Input
                     label='Pertanyaan'
                     {...register('pertanyaan')}
                     isInvalid={!!errors.pertanyaan}
                     errorMessage={errors.pertanyaan?.message}
                   />
-
                   <div className='grid grid-cols-2 gap-4'>
                     <Input
                       label='Opsi A'
@@ -235,21 +284,18 @@ export default function SoalPage() {
                       isInvalid={!!errors.opsi_a}
                       errorMessage={errors.opsi_a?.message}
                     />
-
                     <Input
                       label='Opsi B'
                       {...register('opsi_b')}
                       isInvalid={!!errors.opsi_b}
                       errorMessage={errors.opsi_b?.message}
                     />
-
                     <Input
                       label='Opsi C'
                       {...register('opsi_c')}
                       isInvalid={!!errors.opsi_c}
                       errorMessage={errors.opsi_c?.message}
                     />
-
                     <Input
                       label='Opsi D'
                       {...register('opsi_d')}
@@ -257,7 +303,6 @@ export default function SoalPage() {
                       errorMessage={errors.opsi_d?.message}
                     />
                   </div>
-
                   <Input
                     label='Jawaban Benar'
                     {...register('jawaban_benar')}
@@ -270,7 +315,6 @@ export default function SoalPage() {
                   <Button variant='flat' onPress={close}>
                     Batal
                   </Button>
-
                   <Button
                     color='primary'
                     type='submit'

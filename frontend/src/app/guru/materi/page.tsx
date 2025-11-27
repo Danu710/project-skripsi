@@ -18,17 +18,18 @@ import { Input, Textarea } from '@heroui/input';
 const schema = z.object({
   judul_materi: z.string().min(3, 'Judul minimal 3 karakter'),
   deskripsi: z.string().optional(),
-  file_materi: z
-    .any()
-    .refine((file) => file?.length === 1, 'File wajib diupload'),
+  file_materi: z.any().optional(),
 });
+
+type FormValues = z.infer<typeof schema>;
 
 export default function MateriListWithUpload() {
   const [isOpen, setIsOpen] = useState(false);
+  const [editingMateri, setEditingMateri] = useState<Materi | null>(null);
   const [idGuru, setIdGuru] = useState<User | null>(null);
   const queryClient = useQueryClient();
 
-  // GET DATA
+  // ambil data materi
   const { data, isLoading } = useQuery<Materi[]>({
     queryKey: ['materi'],
     queryFn: async () => {
@@ -37,65 +38,118 @@ export default function MateriListWithUpload() {
     },
   });
 
-  // FORM
+  // CREATE MUTATION
+  const createMutation = useMutation({
+    mutationFn: async (formData: FormData) =>
+      api.post('/materi', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      }),
+    onSuccess: () => queryClient.invalidateQueries(['materi']),
+  });
+
+  // UPDATE MUTATION
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, formData }: { id: number; formData: FormData }) =>
+      api.put(`/materi/${id}`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      }),
+    onSuccess: () => queryClient.invalidateQueries(['materi']),
+  });
+
+  // DELETE MUTATION
+  const deleteMutation = useMutation({
+    mutationFn: async (id: number) => api.delete(`/materi/${id}`),
+    onSuccess: () => queryClient.invalidateQueries(['materi']),
+  });
+
   const {
     register,
     handleSubmit,
     reset,
     formState: { errors },
-  } = useForm({
+  } = useForm<FormValues>({
     resolver: zodResolver(schema),
   });
 
-  const mutation = useMutation({
-    mutationFn: async (formData) => {
-      return await api.post('/materi', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries(['materi']);
-      setIsOpen(false);
-      reset();
-    },
-  });
-
-  // Ambil user dari localStorage
+  // ambil user dari localStorage
   useEffect(() => {
-    const user = JSON.parse(localStorage.getItem('user'));
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
     setIdGuru(user?.id);
   }, []);
 
-  // Kalau belum dapat id_guru, jangan render
   if (!idGuru) return <p>Mengambil data guru...</p>;
+  if (isLoading) return <p>Loading...</p>;
 
-  const onSubmit = (values) => {
+  const onSubmit = (values: FormValues) => {
     const fd = new FormData();
     fd.append('judul_materi', values.judul_materi);
     fd.append('deskripsi', values.deskripsi || '');
-    fd.append('id_guru', idGuru); // ⬅ dari localStorage
-    fd.append('file_materi', values.file_materi[0]);
+    fd.append('id_guru', idGuru);
+    if (values.file_materi && values.file_materi.length > 0) {
+      fd.append('file_materi', values.file_materi[0]);
+    }
 
-    mutation.mutate(fd);
+    if (editingMateri) {
+      updateMutation.mutate({ id: editingMateri.id_materi, formData: fd });
+    } else {
+      createMutation.mutate(fd);
+    }
+
+    setIsOpen(false);
+    setEditingMateri(null);
+    reset();
   };
 
-  if (isLoading) return <p>Loading...</p>;
+  const handleEdit = (materi: Materi) => {
+    setEditingMateri(materi);
+    reset({
+      judul_materi: materi.judul_materi,
+      deskripsi: materi.deskripsi,
+    });
+    setIsOpen(true);
+  };
+
+  const handleDelete = (id: number) => {
+    if (confirm('Apakah Anda yakin ingin menghapus materi ini?')) {
+      deleteMutation.mutate(id);
+    }
+  };
 
   return (
     <div className='p-6 bg-white rounded-xl shadow-md space-y-6'>
-      {/* HEADER */}
       <div className='flex justify-between items-center'>
         <h1 className='text-2xl font-bold'>Daftar Materi</h1>
-        <Button color='primary' onPress={() => setIsOpen(true)}>
+        <Button
+          color='primary'
+          onPress={() => {
+            setEditingMateri(null);
+            setIsOpen(true);
+          }}>
           Tambah Materi
         </Button>
       </div>
 
       {/* LIST */}
-      {data.map((item: Materi) => (
+      {data?.map((item) => (
         <Card key={item.id_materi} className='border shadow-sm'>
-          <CardHeader>
+          <CardHeader className='flex justify-between items-center'>
             <h2 className='font-semibold text-lg'>{item.judul_materi}</h2>
+            <div className='flex gap-2'>
+              <Button
+                size='sm'
+                color='success'
+                variant='flat'
+                onPress={() => handleEdit(item)}>
+                Edit
+              </Button>
+              <Button
+                size='sm'
+                color='danger'
+                variant='flat'
+                onPress={() => handleDelete(item.id_materi)}>
+                Hapus
+              </Button>
+            </div>
           </CardHeader>
 
           <CardBody>
@@ -113,13 +167,15 @@ export default function MateriListWithUpload() {
         </Card>
       ))}
 
-      {/* MODAL UPLOAD */}
+      {/* MODAL */}
       <Modal isOpen={isOpen} onOpenChange={setIsOpen} size='lg'>
         <ModalContent>
           {(onClose) => (
             <>
               <ModalHeader>
-                <p className='text-xl font-semibold'>Tambah Materi Baru</p>
+                <p className='text-xl font-semibold'>
+                  {editingMateri ? 'Edit Materi' : 'Tambah Materi Baru'}
+                </p>
               </ModalHeader>
 
               <ModalBody>
@@ -157,8 +213,10 @@ export default function MateriListWithUpload() {
                       <Button
                         color='primary'
                         type='submit'
-                        isLoading={mutation.isPending}>
-                        Simpan
+                        isLoading={
+                          createMutation.isPending || updateMutation.isPending
+                        }>
+                        {editingMateri ? 'Update' : 'Simpan'}
                       </Button>
                     </CardFooter>
                   </form>

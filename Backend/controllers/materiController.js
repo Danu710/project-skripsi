@@ -1,3 +1,5 @@
+import fs from 'fs';
+import path from 'path';
 import db from '../models/index.js';
 const { Materi } = db;
 
@@ -30,6 +32,79 @@ export const getAllMateri = async (req, res) => {
   try {
     const materi = await Materi.findAll();
     res.json(materi);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+export const getMateriById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const materi = await Materi.findByPk(id);
+
+    if (!materi) {
+      return res.status(404).json({ message: 'Materi tidak ditemukan' });
+    }
+
+    res.json(materi);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+export const deleteMateri = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const materi = await Materi.findByPk(id);
+
+    if (!materi) {
+      return res.status(404).json({ message: 'Materi tidak ditemukan' });
+    }
+
+    await materi.destroy();
+
+    res.json({ message: 'Materi berhasil dihapus' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+export const updateMateri = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { judul_materi, deskripsi, id_guru } = req.body;
+
+    const materi = await Materi.findByPk(id);
+
+    if (!materi) {
+      return res.status(404).json({ message: 'Materi tidak ditemukan' });
+    }
+
+    // Jika upload file baru
+    let file_materi = materi.file_materi;
+
+    if (req.file) {
+      // Hapus file lama jika ada
+      if (file_materi) {
+        const oldPath = path.join('uploads/materi', file_materi);
+        if (fs.existsSync(oldPath)) {
+          fs.unlinkSync(oldPath);
+        }
+      }
+
+      file_materi = req.file.filename; // replace with new file
+    }
+
+    await materi.update({
+      judul_materi: judul_materi || materi.judul_materi,
+      deskripsi: deskripsi || materi.deskripsi,
+      id_guru: id_guru || materi.id_guru,
+      file_materi,
+    });
+
+    res.json({ message: 'Materi berhasil diupdate', materi });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

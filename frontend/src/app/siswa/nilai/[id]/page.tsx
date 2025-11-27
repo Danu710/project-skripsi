@@ -45,7 +45,7 @@ export default function NilaiPage() {
 
   return (
     <div className='p-6'>
-      <h1 className='text-xl font-bold mb-4'>Hasil Nilai Ujian</h1>
+      <h1 className='text-xl font-bold mb-4'>Hasil Nilai Tes</h1>
 
       <div className='space-y-4'>
         {data.map((item: SawItem, index: number) => (

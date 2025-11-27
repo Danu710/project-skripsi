@@ -37,7 +37,7 @@ export default function PageUjian() {
 
   return (
     <div className='p-6'>
-      <h1 className='text-xl font-semibold mb-4'>Daftar Ujian</h1>
+      <h1 className='text-xl font-semibold mb-4'>Daftar Tes</h1>
 
       <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
         {data?.map((item) => (
@@ -50,7 +50,7 @@ export default function PageUjian() {
 
             <div className='mt-2 text-gray-600'>
               <p>
-                <strong>ID Ujian:</strong> {item.id_ujian}
+                <strong>ID Tes:</strong> {item.id_ujian}
               </p>
               <p>
                 <strong>Tanggal:</strong>{' '}
@@ -65,14 +65,14 @@ export default function PageUjian() {
                   color='success'
                   className='mt-4'
                   onPress={() => router.push(`/siswa/soal/${item.id_ujian}`)}>
-                  Kerjakan Ujian
+                  Kerjakan Tes
                 </Button>
 
                 <Button
                   color='primary'
                   className='mt-4'
                   onPress={() => router.push(`/siswa/nilai/${item.id_ujian}`)}>
-                  Lihat Nilai
+                  Lihat Tes
                 </Button>
               </div>
             </div>

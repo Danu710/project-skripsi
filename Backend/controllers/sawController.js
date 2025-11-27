@@ -13,6 +13,7 @@ export async function hitungNilaiSiswa(req, res) {
       return res.status(400).json({ message: 'id_ujian harus berupa number' });
     }
 
+    // === Ambil semua data ===
     const jawabanData = await Jawaban.findAll({
       where: { id_ujian },
       include: [{ model: Soal }, { model: Siswa }],
@@ -23,41 +24,58 @@ export async function hitungNilaiSiswa(req, res) {
 
     const siswaMap = {};
 
-    // === Hitung nilai soal per siswa ===
+    // ===============================================
+    // 1) KUMPULKAN JUMLAH BENAR PER KRITERIA
+    // ===============================================
     for (const j of jawabanData) {
-      const siswa = j.Siswa;
-      const soal = j.Soal;
-      if (!siswa || !soal) continue;
+      if (!j.Siswa || !j.Soal) continue;
 
-      const siswaId = siswa.id_siswa;
-      const kriteriaId = soal.id_kriteria;
+      const siswaId = j.Siswa.id_siswa;
+      const kriteriaId = j.Soal.id_kriteria;
 
       if (!siswaMap[siswaId]) {
         siswaMap[siswaId] = {
           id_siswa: siswaId,
-          nama_siswa: siswa.nama_siswa,
+          nama_siswa: j.Siswa.nama_siswa,
           nilaiSoal: {},
           nilai: {},
         };
       }
 
-      const skor = j.jawaban_text === soal.jawaban_benar ? 100 : 0;
-
       if (!siswaMap[siswaId].nilaiSoal[kriteriaId]) {
-        siswaMap[siswaId].nilaiSoal[kriteriaId] = [];
+        siswaMap[siswaId].nilaiSoal[kriteriaId] = {
+          benar: 0,
+          total: 0,
+        };
       }
 
-      siswaMap[siswaId].nilaiSoal[kriteriaId].push(skor);
+      const jawabanSiswa = (j.jawaban_text || '').trim().toLowerCase();
+      const jawabanBenar = (j.Soal.jawaban_benar || '').trim().toLowerCase();
+
+      // tambahkan total soal
+      siswaMap[siswaId].nilaiSoal[kriteriaId].total += 1;
+
+      // cek benar
+      if (jawabanSiswa === jawabanBenar) {
+        siswaMap[siswaId].nilaiSoal[kriteriaId].benar += 1;
+      }
     }
 
-    // === KONVERSI nilaiSoal → nilai C1, C2, C3, C4, C5 ===
+    // ===============================================
+    // 2) HITUNG PERSENTASE & KONVERSI KE SUBKRITERIA
+    // ===============================================
     for (const siswaId in siswaMap) {
       const data = siswaMap[siswaId];
 
       for (const k of kriteriaList) {
-        const arr = data.nilaiSoal[k.id_kriteria] || [0];
-        const avg = arr.reduce((a, b) => a + b, 0) / arr.length;
+        const nilaiObj = data.nilaiSoal[k.id_kriteria];
 
+        let persen = 0;
+        if (nilaiObj && nilaiObj.total > 0) {
+          persen = (nilaiObj.benar / nilaiObj.total) * 100; // <--- perbaikan besar
+        }
+
+        // Cari subkriteria yang match
         const sub = subkriteriaData.find((s) => {
           if (s.id_kriteria !== k.id_kriteria) return false;
 
@@ -67,37 +85,32 @@ export async function hitungNilaiSiswa(req, res) {
           const min = Number(match[1]);
           const max = Number(match[2]);
 
-          return avg >= min && avg <= max;
+          return persen >= min && persen <= max;
         });
 
-        const nilaiSub = sub ? sub.nilai : 0;
-
-        data.nilai[k.kode] = nilaiSub; // isi C1–C5
+        data.nilai[k.kode] = sub ? sub.nilai : 1;
       }
 
       delete data.nilaiSoal;
     }
 
-    // =====================================================
-    // 🔥 SIMPAN NILAI KE TABEL nilai (insert / update)
-    // =====================================================
+    // ===============================================
+    // 3) SIMPAN (INSERT / UPDATE)
+    // ===============================================
     const nilaiArray = Object.values(siswaMap);
 
     for (const s of nilaiArray) {
-      // cek apakah nilai untuk siswa + ujian ini sudah ada
       const existing = await Nilai.findOne({
         where: { id_siswa: s.id_siswa, id_ujian },
       });
 
       if (existing) {
-        // update nilai
         await existing.update({
           detail_nilai: s.nilai,
-          total_nilai: null, // belum proses SAW
-          ranking: null, // belum dihitung
+          total_nilai: null,
+          ranking: null,
         });
       } else {
-        // insert baru
         await Nilai.create({
           id_siswa: s.id_siswa,
           id_ujian,

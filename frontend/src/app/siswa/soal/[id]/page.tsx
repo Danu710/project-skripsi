@@ -118,7 +118,7 @@ export default function SoalPage() {
 
   return (
     <div className='p-10 space-y-8'>
-      <h1 className='text-2xl font-bold text-gray-800'>Soal Ujian</h1>
+      <h1 className='text-2xl font-bold text-gray-800'>Soal Tes</h1>
       <div className='text-right text-xl text-red-600 font-bold'>
         Sisa Waktu: {formatTime(timeLeft)}
       </div>

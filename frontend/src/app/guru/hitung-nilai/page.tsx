@@ -50,7 +50,7 @@ export default function HitungNilaiPage() {
         <button
           onClick={handleProses}
           className='bg-blue-600 text-white px-4 py-2 rounded'>
-          Proses SAW
+          Proses Nilai
         </button>
       </div>
 
