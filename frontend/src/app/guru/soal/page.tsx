@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/app/lib/api';
 import {
@@ -11,6 +12,8 @@ import {
   ModalHeader,
   ModalFooter,
   useDisclosure,
+  Select,
+  SelectItem,
 } from '@heroui/react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -54,6 +57,8 @@ export interface Ujian {
 }
 
 export default function SoalPage() {
+  const [filterUjian, setFilterUjian] = useState<number | null>(null);
+
   const queryClient = useQueryClient();
 
   const {
@@ -73,6 +78,13 @@ export default function SoalPage() {
       return res.data;
     },
   });
+
+  const daftarUjian = data
+    ? Array.from(new Set(data.map((item) => item.id_ujian)))
+    : [];
+  const filteredData = filterUjian
+    ? data?.filter((item) => item.id_ujian === filterUjian)
+    : data;
 
   const { isOpen, onOpen, onOpenChange, onClose } = useDisclosure();
 
@@ -94,10 +106,30 @@ export default function SoalPage() {
       <h1 className='text-2xl font-bold text-gray-700 text-center'>
         Daftar Soal
       </h1>
-
-      <Button color='primary' onPress={onOpen}>
-        Tambah Soal
-      </Button>
+      <div className='my-4 flex justify-between items-center gap-4'>
+        <div className='w-1/2'>
+          <h1 className='font-semibold text-gray-700'>Filter Ujian:</h1>
+          <Select
+            className='border p-2 rounded-lg'
+            value={filterUjian ?? ''}
+            onChange={(e) =>
+              setFilterUjian(
+                e.target.value === '' ? null : Number(e.target.value)
+              )
+            }>
+            {daftarUjian.map((id) => (
+              <SelectItem key={id} value={id}>
+                ID Ujian {id}
+              </SelectItem>
+            ))}
+          </Select>
+        </div>
+        <div>
+          <Button color='primary' onPress={onOpen}>
+            Tambah Soal
+          </Button>
+        </div>
+      </div>
 
       {/* STATE UI */}
       {isLoading && <p className='mt-4 text-blue-600'>Loading data soal...</p>}
@@ -107,7 +139,7 @@ export default function SoalPage() {
 
       {/* DATA LIST */}
       <div className='mt-6 space-y-4'>
-        {data?.map((item) => (
+        {filteredData?.map((item) => (
           <div
             key={item.id_soal}
             className='bg-white shadow p-5 rounded-lg border'>

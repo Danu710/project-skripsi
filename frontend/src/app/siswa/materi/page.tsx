@@ -7,7 +7,7 @@ type Materi = {
   id_materi: number;
   judul: string;
   deskripsi: string;
-  file_url: string;
+  file_materi: string;
   createdAt: string;
 };
 
@@ -53,10 +53,10 @@ export default function MateriPage() {
             </p>
 
             <a
-              href={item.file_url}
+              href={`http://localhost:5000/uploads/materi/${item.file_materi}`}
               target='_blank'
-              className='inline-block mt-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700'>
-              📄 Buka Materi
+              className='text-blue-600 underline'>
+              Lihat Dokumen
             </a>
           </div>
         ))}

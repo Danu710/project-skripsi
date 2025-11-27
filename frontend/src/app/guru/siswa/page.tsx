@@ -1,9 +1,7 @@
 export default function SiswaPage() {
   return (
     <div className='p-10 text-center'>
-      <h1 className='text-2xl font-bold text-gray-700'>
-        Halaman Pembuatan Siswa
-      </h1>
+      <h1 className='text-2xl font-bold text-gray-700'>Halaman Lihat siswa</h1>
       <p className='text-gray-500 mt-2'>
         Fitur ini akan dikembangkan selanjutnya.
       </p>

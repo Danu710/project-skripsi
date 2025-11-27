@@ -39,6 +39,7 @@ app.use('/api/auth', authRouter);
 app.use('/api/kriteria', kriteriaRouter);
 app.use('/api/subkriteria', subKriteriaRouter);
 app.use('/api/saw', sawRouter);
+app.use('/uploads', express.static('uploads'));
 
 const PORT = process.env.PORT || 5000;
 //app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

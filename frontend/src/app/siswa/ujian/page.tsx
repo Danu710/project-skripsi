@@ -60,12 +60,21 @@ export default function PageUjian() {
                 <strong>Durasi:</strong> {item.durasi} menit
               </p>
 
-              <Button
-                color='success'
-                className='mt-4'
-                onPress={() => router.push(`/siswa/soal/${item.id_ujian}`)}>
-                Kerjakan Ujian
-              </Button>
+              <div className='mt-4 flex gap-4'>
+                <Button
+                  color='success'
+                  className='mt-4'
+                  onPress={() => router.push(`/siswa/soal/${item.id_ujian}`)}>
+                  Kerjakan Ujian
+                </Button>
+
+                <Button
+                  color='primary'
+                  className='mt-4'
+                  onPress={() => router.push(`/siswa/nilai/${item.id_ujian}`)}>
+                  Lihat Nilai
+                </Button>
+              </div>
             </div>
           </div>
         ))}

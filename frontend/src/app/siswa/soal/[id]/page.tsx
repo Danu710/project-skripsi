@@ -58,7 +58,7 @@ export default function SoalPage() {
   const soalUjian = data?.filter((item: Root2) => item.id_ujian === id_ujian);
 
   const handleSubmit = async () => {
-    const id_siswa = user.id_siswa; // contoh, ini nanti kamu ambil dari session/login
+    const id_siswa = user.id; // contoh, ini nanti kamu ambil dari session/login
 
     for (const id_soal in jawaban) {
       await apiSiswa.post('/jawaban', {
