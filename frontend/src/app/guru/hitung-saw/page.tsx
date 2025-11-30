@@ -3,6 +3,15 @@
 import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { api } from '@/app/lib/api';
+import { Card, CardBody, Input, Button } from '@heroui/react';
+import {
+  Table,
+  TableHeader,
+  TableColumn,
+  TableBody,
+  TableRow,
+  TableCell,
+} from '@heroui/table';
 
 interface SawResult {
   id_siswa: number;
@@ -27,27 +36,34 @@ export default function HitungSawPage() {
   };
 
   return (
-    <div className='p-10'>
-      <h1 className='text-2xl font-bold mb-5 text-gray-700 text-center'>
+    <div className='p-10 flex flex-col items-center gap-6'>
+      {/* JUDUL */}
+      <h1 className='text-3xl font-bold text-gray-700 text-center'>
         Proses Perhitungan SAW
       </h1>
-
       {/* PILIH UJIAN */}
-      <div className='flex items-center gap-3 mb-6 justify-center'>
-        <label className='font-medium'>Pilih ID Ujian:</label>
-        <input
-          type='number'
-          value={idUjian}
-          onChange={(e) => setIdUjian(Number(e.target.value))}
-          className='border px-3 py-2 rounded w-24'
-        />
+      <Card className='w-full max-w-xl shadow-md'>
+        <CardBody className='flex flex-col gap-4'>
+          <label className='font-medium text-gray-600'>Pilih ID Ujian</label>
 
-        <button
-          onClick={handleProses}
-          className='bg-blue-600 text-white px-4 py-2 rounded'>
-          Proses SAW
-        </button>
-      </div>
+          <Input
+            type='number'
+            radius='md'
+            size='md'
+            placeholder='Masukkan ID Ujian...'
+            value={idUjian ? idUjian.toString() : ''}
+            onChange={(e) => setIdUjian(Number(e.target.value))}
+          />
+
+          <Button
+            color='primary'
+            fullWidth
+            onClick={handleProses}
+            isLoading={sawMutation.isLoading}>
+            Proses SAW
+          </Button>
+        </CardBody>
+      </Card>
 
       {/* LOADING */}
       {sawMutation.isLoading && (
@@ -63,24 +79,33 @@ export default function HitungSawPage() {
 
       {/* HASIL */}
       {sawMutation.data && (
-        <table className='w-full border border-gray-300 mt-5'>
-          <thead className='bg-gray-200'>
-            <tr>
-              <th className='p-2 border'>Nama Siswa</th>
-              <th className='p-2 border'>Total Nilai</th>
-              <th className='p-2 border'>Ranking</th>
-            </tr>
-          </thead>
-          <tbody>
-            {sawMutation.data.map((item) => (
-              <tr key={item.id_siswa} className='text-center'>
-                <td className='p-2 border'>{item.nama_siswa}</td>
-                <td className='p-2 border font-semibold'>{item.total_nilai}</td>
-                <td className='p-2 border font-bold'>{item.ranking}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <Card className='w-full max-w-4xl shadow-lg mt-4'>
+          <CardBody>
+            <h2 className='text-xl font-semibold mb-4'>
+              Hasil Perhitungan SAW
+            </h2>
+
+            <Table aria-label='Hasil Perhitungan SAW'>
+              <TableHeader>
+                <TableColumn>Nama Siswa</TableColumn>
+                <TableColumn>Total Nilai</TableColumn>
+                <TableColumn>Ranking</TableColumn>
+              </TableHeader>
+
+              <TableBody>
+                {sawMutation.data.map((item) => (
+                  <TableRow key={item.id_siswa}>
+                    <TableCell>{item.nama_siswa}</TableCell>
+                    <TableCell className='font-semibold'>
+                      {item.total_nilai}
+                    </TableCell>
+                    <TableCell className='font-bold'>{item.ranking}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardBody>
+        </Card>
       )}
     </div>
   );

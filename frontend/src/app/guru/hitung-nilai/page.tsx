@@ -3,6 +3,15 @@
 import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { api } from '@/app/lib/api';
+import { Button, Input, Card, CardBody } from '@heroui/react';
+import {
+  Table,
+  TableHeader,
+  TableColumn,
+  TableBody,
+  TableRow,
+  TableCell,
+} from '@heroui/table';
 
 interface HitungNilaiResult {
   id_siswa: number;
@@ -32,27 +41,37 @@ export default function HitungNilaiPage() {
   };
 
   return (
-    <div className='p-10'>
-      <h1 className='text-2xl font-bold mb-5 text-gray-700 text-center'>
+    <div className='p-10 h-full flex flex-col items-center gap-6'>
+      {/* JUDUL */}
+      <h1 className='text-3xl font-bold text-gray-700 text-center'>
         Proses Perhitungan Nilai
       </h1>
 
       {/* PILIH UJIAN */}
-      <div className='flex items-center gap-3 mb-6 justify-center'>
-        <label className='font-medium'>Pilih ID Ujian:</label>
-        <input
-          type='number'
-          value={idUjian}
-          onChange={(e) => setIdUjian(Number(e.target.value))}
-          className='border px-3 py-2 rounded w-24'
-        />
+      <Card className='w-full max-w-xl shadow-md'>
+        <CardBody className='flex flex-col gap-4'>
+          <div className='flex flex-col gap-3'>
+            <label className='font-medium text-gray-600'>Pilih ID Ujian</label>
 
-        <button
-          onClick={handleProses}
-          className='bg-blue-600 text-white px-4 py-2 rounded'>
-          Proses Nilai
-        </button>
-      </div>
+            <Input
+              type='number'
+              radius='md'
+              size='md'
+              placeholder='Masukkan ID Ujian...'
+              value={idUjian ? idUjian.toString() : ''}
+              onChange={(e) => setIdUjian(Number(e.target.value))}
+            />
+
+            <Button
+              color='primary'
+              fullWidth
+              onClick={handleProses}
+              isLoading={hitungNilaiMutation.isLoading}>
+              Proses Nilai
+            </Button>
+          </div>
+        </CardBody>
+      </Card>
 
       {/* LOADING */}
       {hitungNilaiMutation.isLoading && (
@@ -68,30 +87,37 @@ export default function HitungNilaiPage() {
 
       {/* HASIL */}
       {hitungNilaiMutation.data && (
-        <table className='w-full border border-gray-300 mt-5'>
-          <thead>
-            <tr>
-              <th>Nama Siswa</th>
-              <th>C1</th>
-              <th>C2</th>
-              <th>C3</th>
-              <th>C4</th>
-              <th>C5</th>
-            </tr>
-          </thead>
-          <tbody>
-            {hitungNilaiMutation.data.map((item) => (
-              <tr key={item.id_siswa} className='text-center'>
-                <td>{item.nama_siswa}</td>
-                <td>{item.nilai.C1}</td>
-                <td>{item.nilai.C2}</td>
-                <td>{item.nilai.C3}</td>
-                <td>{item.nilai.C4}</td>
-                <td>{item.nilai.C5}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <Card className='w-full max-w-4xl shadow-lg mt-4'>
+          <CardBody>
+            <h2 className='text-xl font-semibold mb-4'>
+              Hasil Perhitungan Nilai
+            </h2>
+
+            <Table aria-label='Hasil Nilai Siswa'>
+              <TableHeader>
+                <TableColumn>NAMA SISWA</TableColumn>
+                <TableColumn>C1</TableColumn>
+                <TableColumn>C2</TableColumn>
+                <TableColumn>C3</TableColumn>
+                <TableColumn>C4</TableColumn>
+                <TableColumn>C5</TableColumn>
+              </TableHeader>
+
+              <TableBody>
+                {hitungNilaiMutation.data.map((item) => (
+                  <TableRow key={item.id_siswa}>
+                    <TableCell>{item.nama_siswa}</TableCell>
+                    <TableCell>{item.nilai.C1}</TableCell>
+                    <TableCell>{item.nilai.C2}</TableCell>
+                    <TableCell>{item.nilai.C3}</TableCell>
+                    <TableCell>{item.nilai.C4}</TableCell>
+                    <TableCell>{item.nilai.C5}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardBody>
+        </Card>
       )}
     </div>
   );
