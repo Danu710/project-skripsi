@@ -1,5 +1,6 @@
 'use client';
 
+import { useAuth } from '../context/AuthContext';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import {
@@ -22,7 +23,8 @@ type LoginForm = {
 
 export default function LoginPage() {
   const router = useRouter();
-  const { register, handleSubmit, watch } = useForm<LoginForm>({
+  const { login } = useAuth();
+  const { register, handleSubmit } = useForm<LoginForm>({
     defaultValues: { role: 'siswa' },
   });
 
@@ -36,9 +38,10 @@ export default function LoginPage() {
       return res.data;
     },
     onSuccess: (data) => {
-      localStorage.setItem('user', JSON.stringify(data.user));
-      if (data.user.role === 'guru') router.push('/dashboard/guru');
-      else router.push('/dashboard/siswa');
+      login(data.user);
+      router.push(
+        data.user.role === 'guru' ? '/dashboard/guru' : '/dashboard/siswa'
+      );
     },
     onError: (err: any) => {
       setError(err.response?.data?.message || 'Login gagal');

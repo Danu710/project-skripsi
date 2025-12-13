@@ -1,5 +1,5 @@
 'use client';
-
+import { AuthProvider } from './context/AuthContext';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { HeroUIProvider } from '@heroui/react';
 import './globals.css';
@@ -18,8 +18,10 @@ export default function RootLayout({
       <body className='bg-gray-50'>
         <HeroUIProvider>
           <QueryClientProvider client={queryClient}>
-            <NavbarApp />
-            {children}
+            <AuthProvider>
+              <NavbarApp />
+              {children}
+            </AuthProvider>
           </QueryClientProvider>
         </HeroUIProvider>
       </body>

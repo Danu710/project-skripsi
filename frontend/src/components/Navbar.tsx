@@ -11,28 +11,14 @@ import {
   Avatar,
   Button,
 } from '@heroui/react';
+import Link from 'next/link';
+import { useAuth } from '@/app/context/AuthContext';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
-
-interface User {
-  id: number;
-  nama: string;
-  role: string;
-}
 
 export default function NavbarApp() {
   const router = useRouter();
-  const [user, setUser] = useState<User | null>(null);
 
-  useEffect(() => {
-    const stored = localStorage.getItem('user');
-    if (stored) setUser(JSON.parse(stored));
-  }, []);
-
-  const logout = () => {
-    localStorage.removeItem('user');
-    router.push('/login');
-  };
+  const { user, logout } = useAuth();
 
   return (
     <Navbar isBordered maxWidth='full' className='px-6'>
@@ -40,13 +26,17 @@ export default function NavbarApp() {
       {/*   KIRI                    */}
       {/* ========================== */}
       <NavbarBrand>
-        <p className='font-bold text-xl text-blue-600'>
-          {user ? (
-            <>Dashboard {user.role === 'guru' ? 'Guru' : 'Siswa'}</>
-          ) : (
-            'Aplikasi Pembelajaran SMK Ganesa Satria 2'
-          )}
-        </p>
+        {user ? (
+          <Link
+            href={user.role === 'guru' ? '/dashboard/guru' : '/dashboard/siswa'}
+            className='font-bold text-xl text-blue-600'>
+            Dashboard {user.role === 'guru' ? 'Guru' : 'Siswa'}
+          </Link>
+        ) : (
+          <Link href='/login' className='font-bold text-xl text-blue-600'>
+            Aplikasi Pembelajaran SMK Ganesa Satria 2
+          </Link>
+        )}
       </NavbarBrand>
 
       {/* Spacer biar tengah gak mepet */}
