@@ -5,6 +5,7 @@ import {
   getMateriById,
   deleteMateri,
   updateMateri,
+  getMateriSiswa,
 } from '../controllers/materiController.js';
 import { uploadMateri } from '../middleware/multerMateri.js';
 
@@ -15,5 +16,6 @@ router.get('/', getAllMateri);
 router.get('/:id', getMateriById);
 router.delete('/:id', deleteMateri);
 router.put('/:id', uploadMateri.single('file_materi'), updateMateri);
+router.get('/siswa/:id_siswa', getMateriSiswa);
 
 export default router;

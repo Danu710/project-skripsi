@@ -23,7 +23,21 @@ export default function PageUjian() {
     },
   });
 
-  console.log(data);
+  const handleKerjakan = async (id_ujian: number) => {
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+
+    try {
+      await api.post('/ujian/mulai', {
+        id_siswa: user.id,
+        id_ujian,
+      });
+
+      router.push(`/siswa/soal/${id_ujian}`);
+    } catch (err) {
+      console.log(err);
+      alert('Gagal memulai ujian');
+    }
+  };
 
   if (isLoading)
     return (
@@ -50,9 +64,6 @@ export default function PageUjian() {
 
             <div className='mt-2 text-gray-600'>
               <p>
-                <strong>ID Tes:</strong> {item.id_ujian}
-              </p>
-              <p>
                 <strong>Tanggal:</strong>{' '}
                 {new Date(item.tanggal_ujian).toLocaleDateString()}
               </p>
@@ -64,7 +75,7 @@ export default function PageUjian() {
                 <Button
                   color='success'
                   className='mt-4'
-                  onPress={() => router.push(`/siswa/soal/${item.id_ujian}`)}>
+                  onPress={() => handleKerjakan(item.id_ujian)}>
                   Kerjakan Tes
                 </Button>
 

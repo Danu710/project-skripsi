@@ -31,6 +31,15 @@ const Siswa = sequelize.define(
       type: DataTypes.STRING,
       allowNull: true,
     },
+    sedang_ujian: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
+    id_ujian_aktif: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
   },
   {
     tableName: 'siswa',

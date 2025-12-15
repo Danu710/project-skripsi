@@ -1,7 +1,9 @@
 'use client';
-
+import { Spinner } from '@heroui/react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/app/lib/api';
+import { useRouter } from 'next/navigation';
+import { AxiosError } from 'axios';
 
 type Materi = {
   id_materi: number;
@@ -12,13 +14,51 @@ type Materi = {
 };
 
 export default function MateriPage() {
-  const { data, isLoading, isError } = useQuery<Materi[]>({
+  const router = useRouter();
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+
+  const { data, isLoading, isError, error } = useQuery<Materi[], AxiosError>({
     queryKey: ['materi-siswa'],
     queryFn: async () => {
-      const res = await api.get('http://localhost:5000/api/materi');
+      const res = await api.get(
+        `http://localhost:5000/api/materi/siswa/${user.id}`
+      );
       return res.data;
     },
   });
+
+  if (isLoading) {
+    return (
+      <div className='flex justify-center p-20'>
+        <Spinner />
+      </div>
+    );
+  }
+
+  if (isError) {
+    const status = error?.response?.status;
+
+    if (status === 403) {
+      return (
+        <div className='p-10 text-center'>
+          <h2 className='text-xl font-semibold text-red-600'>
+            Akses Materi Dibatasi
+          </h2>
+          <p className='mt-2 text-gray-600'>
+            Anda sedang mengerjakan ujian. Materi tidak dapat diakses.
+          </p>
+
+          <button
+            className='mt-6 px-4 py-2 bg-blue-600 text-white rounded'
+            onClick={() => router.push('/dashboard/siswa')}>
+            Kembali ke Dashboard
+          </button>
+        </div>
+      );
+    }
+
+    return <div className='p-6 text-red-500'>Gagal memuat materi.</div>;
+  }
 
   return (
     <div className='p-8'>

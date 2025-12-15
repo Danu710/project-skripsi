@@ -69,9 +69,28 @@ export default function SoalPage() {
       });
     }
 
+    // 2. Tandai ujian selesai
+    await api.post('/ujian/selesai', {
+      id_siswa,
+    });
+
     alert('Jawaban berhasil dikirim!');
     router.push('/dashboard/siswa');
   };
+
+  //check status ujian siswa
+  useEffect(() => {
+    const checkStatus = async () => {
+      const res = await api.get(`/ujian/status/${user.id}`);
+
+      if (!res.data.sedang_ujian || res.data.id_ujian_aktif !== id_ujian) {
+        alert('Anda tidak memiliki akses ke ujian ini');
+        router.replace('/siswa/ujian');
+      }
+    };
+
+    checkStatus();
+  }, []);
 
   // Set timer sesuai durasi ujian
   useEffect(() => {

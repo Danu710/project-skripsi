@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import db from '../models/index.js';
-const { Materi } = db;
+const { Materi, Siswa } = db;
 
 export const createMateri = async (req, res) => {
   try {
@@ -30,6 +30,29 @@ export const createMateri = async (req, res) => {
 
 export const getAllMateri = async (req, res) => {
   try {
+    const materi = await Materi.findAll();
+    res.json(materi);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+export const getMateriSiswa = async (req, res) => {
+  try {
+    const { id_siswa } = req.params;
+
+    const siswa = await Siswa.findByPk(id_siswa);
+
+    if (!siswa) {
+      return res.status(404).json({ message: 'Siswa tidak ditemukan' });
+    }
+
+    if (siswa.sedang_ujian) {
+      return res.status(403).json({
+        message: 'Materi tidak dapat diakses saat ujian berlangsung',
+      });
+    }
+
     const materi = await Materi.findAll();
     res.json(materi);
   } catch (err) {
