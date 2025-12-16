@@ -454,7 +454,8 @@ export const cetakHasilSAWPDF = async (req, res) => {
 
       doc.text(i + 1, colNo, y + 6);
       doc.text(h.Siswa.nama_siswa, colNama, y + 6, { width: 210 });
-      doc.text(Number(h.total_nilai).toFixed(2), colNilai, y + 6);
+      //doc.text(Number(h.total_nilai).toFixed(2), colNilai, y + 6); // sebelumnya
+      doc.text(h.total_nilai, colNilai, y + 6);
       doc.text(h.ranking, colRanking, y + 6);
       doc.text(
         new Date(h.createdAt).toLocaleDateString('id-ID'),
