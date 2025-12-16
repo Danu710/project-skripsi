@@ -1,4 +1,6 @@
 // controllers/sawController.js
+import path from 'path';
+import PDFDocument from 'pdfkit';
 import db from '../models/index.js';
 
 const { Siswa, Ujian, Jawaban, Nilai, Kriteria, Subkriteria, Soal, HasilSaw } =
@@ -200,7 +202,8 @@ export async function prosesSAW(req, res) {
         nilai: norm,
       };
     });
-
+    // ---- Hapus hasil saw lama ----
+    await HasilSaw.destroy({ where: { id_ujian } });
     // ---- Hitung Nilai Akhir SAW ----
     const hasilAkhir = normalisasi.map((s) => {
       let total = 0;
@@ -225,7 +228,7 @@ export async function prosesSAW(req, res) {
 
     // Simpan hasil baru
     for (const h of hasilAkhir) {
-      await HasilSaw.create({
+      await HasilSaw.upsert({
         id_siswa: h.id_siswa,
         id_ujian,
         total_nilai: h.total_nilai,
@@ -247,48 +250,87 @@ export async function prosesSAW(req, res) {
 }
 
 //GET HASIL SAW UNTUK SATU UJIAN
+// export const getHasilSAW = async (req, res) => {
+//   try {
+//     const id_ujian = Number(req.params.id_ujian);
+
+//     if (!id_ujian || isNaN(id_ujian)) {
+//       return res.status(400).json({
+//         message: 'id_ujian harus berupa number',
+//       });
+//     }
+
+//     const hasil = await HasilSaw.findAll({
+//       where: { id_ujian },
+//       attributes: ['id_siswa', 'total_nilai', 'ranking'],
+//       include: [
+//         {
+//           model: Siswa,
+//           attributes: ['nama_siswa'], // ambil nama saja
+//         },
+//       ],
+//       order: [['ranking', 'ASC']],
+//       distinct: true, // pastikan row unik
+//     });
+//     if (!hasil || hasil.length === 0) {
+//       return res.status(404).json({
+//         message: 'Belum ada hasil SAW untuk ujian ini',
+//       });
+//     }
+
+//     return res.json({
+//       message: '✔ Data hasil SAW berhasil diambil',
+//       data: hasil.map((h) => ({
+//         id_siswa: h.id_siswa,
+//         nama_siswa: h.Siswa?.nama_siswa || '-',
+//         total_nilai: h.total_nilai,
+//         ranking: h.ranking,
+//       })),
+//     });
+//   } catch (error) {
+//     console.error(error);
+//     return res.status(500).json({
+//       message: 'Gagal mengambil hasil SAW',
+//       error: error.message,
+//     });
+//   }
+// };
+
 export const getHasilSAW = async (req, res) => {
   try {
     const id_ujian = Number(req.params.id_ujian);
 
     if (!id_ujian || isNaN(id_ujian)) {
-      return res.status(400).json({
-        message: 'id_ujian harus berupa number',
-      });
+      return res.status(400).json({ message: 'id_ujian tidak valid' });
     }
 
     const hasil = await HasilSaw.findAll({
       where: { id_ujian },
-      attributes: ['id_siswa', 'total_nilai', 'ranking'],
       include: [
         {
           model: Siswa,
-          attributes: ['nama_siswa'], // ambil nama saja
+          attributes: ['id_siswa', 'nama_siswa'],
         },
       ],
       order: [['ranking', 'ASC']],
-      distinct: true, // pastikan row unik
     });
-    if (!hasil || hasil.length === 0) {
-      return res.status(404).json({
-        message: 'Belum ada hasil SAW untuk ujian ini',
-      });
-    }
+
+    const data = hasil.map((h) => ({
+      id_siswa: h.id_siswa,
+      nama_siswa: h.Siswa.nama_siswa,
+      total_nilai: h.total_nilai,
+      ranking: h.ranking,
+    }));
 
     return res.json({
       message: '✔ Data hasil SAW berhasil diambil',
-      data: hasil.map((h) => ({
-        id_siswa: h.id_siswa,
-        nama_siswa: h.Siswa?.nama_siswa || '-',
-        total_nilai: h.total_nilai,
-        ranking: h.ranking,
-      })),
+      data,
     });
-  } catch (error) {
-    console.error(error);
+  } catch (err) {
+    console.error(err);
     return res.status(500).json({
       message: 'Gagal mengambil hasil SAW',
-      error: error.message,
+      error: err.message,
     });
   }
 };
@@ -303,5 +345,138 @@ export const resetSAW = async (req, res) => {
     res.json({ message: 'HASIL SAW berhasil direset 🎯' });
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+};
+
+export const cetakHasilSAWPDF = async (req, res) => {
+  try {
+    const id_ujian = Number(req.params.id_ujian);
+    if (!id_ujian || isNaN(id_ujian)) {
+      return res.status(400).json({ message: 'id_ujian harus berupa number' });
+    }
+
+    const hasil = await HasilSaw.findAll({
+      where: { id_ujian },
+      include: [{ model: Siswa, attributes: ['nama_siswa'] }],
+      order: [['ranking', 'ASC']],
+    });
+
+    if (hasil.length === 0) {
+      return res.status(404).json({
+        message: 'Belum ada hasil SAW untuk ujian ini',
+      });
+    }
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      `inline; filename="laporan-saw-ujian-${id_ujian}.pdf"`
+    );
+
+    const doc = new PDFDocument({ margin: 40, size: 'A4' });
+    doc.pipe(res);
+
+    // ================= HEADER / KOP =================
+    doc.rect(0, 0, doc.page.width, 130).fill('#0B5C8E');
+
+    const logoPath = path.join(process.cwd(), 'assets/logo-smk.png');
+    doc.image(logoPath, 50, 25, { width: 70 });
+
+    doc
+      .fillColor('white')
+      .font('Helvetica-Bold')
+      .fontSize(14)
+      .text('PEMBELAJARAN ONLINE', 140, 30);
+
+    doc.fontSize(14).text('SMK GANESA SATRIA 2 DEPOK', 140, 50);
+
+    doc
+      .font('Helvetica')
+      .fontSize(10)
+      .text(
+        'JR3V+497, Jl. Merdeka Raya No.78, Abadijaya, Kec. Sukmajaya, Kota Depok, Jawa Barat 16417',
+        140,
+        68,
+        { width: 380 }
+      );
+
+    doc
+      .font('Helvetica-Bold')
+      .fontSize(13)
+      .text('LAPORAN HASIL PERHITUNGAN METODE SAW', 40, 105, {
+        align: 'center',
+        width: 515,
+      });
+
+    // ================= GARIS PEMBATAS HEADER =================
+    doc
+      .moveTo(40, 130)
+      .lineTo(555, 130)
+      .strokeColor('#000')
+      .lineWidth(1)
+      .stroke();
+
+    doc.moveDown(1);
+
+    // ================= TABEL =================
+    const tableTop = doc.y + 10;
+    const rowHeight = 22;
+
+    const colNo = 50;
+    const colNama = 90;
+    const colNilai = 320;
+    const colRanking = 420;
+    const colTanggal = 480;
+
+    // Header tabel
+    doc.rect(40, tableTop, 515, rowHeight).fill('#E6E6E6');
+
+    doc.fillColor('black').font('Helvetica-Bold').fontSize(10);
+
+    doc.text('No', colNo, tableTop + 6);
+    doc.text('Nama Siswa', colNama, tableTop + 6);
+    doc.text('Nilai Akhir', colNilai, tableTop + 6);
+    doc.text('Ranking', colRanking, tableTop + 6);
+    doc.text('Tanggal', colTanggal, tableTop + 6);
+
+    doc
+      .moveTo(40, tableTop + rowHeight)
+      .lineTo(555, tableTop + rowHeight)
+      .stroke();
+
+    // Isi tabel
+    doc.font('Helvetica').fontSize(10);
+
+    hasil.forEach((h, i) => {
+      const y = tableTop + rowHeight * (i + 1);
+
+      doc.moveTo(40, y).lineTo(555, y).stroke();
+
+      doc.text(i + 1, colNo, y + 6);
+      doc.text(h.Siswa.nama_siswa, colNama, y + 6, { width: 210 });
+      doc.text(Number(h.total_nilai).toFixed(2), colNilai, y + 6);
+      doc.text(h.ranking, colRanking, y + 6);
+      doc.text(
+        new Date(h.createdAt).toLocaleDateString('id-ID'),
+        colTanggal,
+        y + 6
+      );
+    });
+
+    // ================= FOOTER =================
+    doc.moveDown(3);
+    doc
+      .fontSize(9)
+      .text(`Dicetak pada: ${new Date().toLocaleDateString('id-ID')}`, {
+        align: 'right',
+      });
+
+    doc.end();
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      message: 'Gagal mencetak laporan SAW',
+      error: err.message,
+    });
   }
 };

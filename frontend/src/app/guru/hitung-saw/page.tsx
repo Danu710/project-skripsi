@@ -62,6 +62,18 @@ export default function HitungSawPage() {
             isLoading={sawMutation.isLoading}>
             Proses SAW
           </Button>
+
+          <Button
+            color='secondary'
+            fullWidth
+            onClick={() =>
+              window.open(
+                `http://localhost:5000/api/saw/cetak-pdf/${idUjian}`,
+                '_blank'
+              )
+            }>
+            Cetak Laporan PDF
+          </Button>
         </CardBody>
       </Card>
 
