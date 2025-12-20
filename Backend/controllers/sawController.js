@@ -465,10 +465,33 @@ export const cetakHasilSAWPDF = async (req, res) => {
     });
 
     // ================= FOOTER =================
-    doc.moveDown(3);
+    doc.moveDown(4);
+
+    const footerX = 350; // posisi kanan
+    const footerWidth = 200;
     doc
-      .fontSize(9)
-      .text(`Dicetak pada: ${new Date().toLocaleDateString('id-ID')}`, {
+      .font('Helvetica')
+      .fontSize(10)
+      .text(`Depok, ${tanggalLengkap}`, footerX, doc.y, {
+        width: footerWidth,
+        align: 'right',
+      });
+
+    doc.moveDown(1);
+
+    doc.font('Helvetica').fontSize(10).text('Waka DU/DI', footerX, doc.y, {
+      width: footerWidth,
+      align: 'right',
+    });
+
+    // Spasi untuk tanda tangan
+    doc.moveDown(4);
+
+    doc
+      .font('Helvetica')
+      .fontSize(10)
+      .text('.................................', footerX, doc.y, {
+        width: footerWidth,
         align: 'right',
       });
 
@@ -481,3 +504,36 @@ export const cetakHasilSAWPDF = async (req, res) => {
     });
   }
 };
+
+const hariIndonesia = [
+  'Minggu',
+  'Senin',
+  'Selasa',
+  'Rabu',
+  'Kamis',
+  'Jumat',
+  'Sabtu',
+];
+
+const bulanIndonesia = [
+  'Januari',
+  'Februari',
+  'Maret',
+  'April',
+  'Mei',
+  'Juni',
+  'Juli',
+  'Agustus',
+  'September',
+  'Oktober',
+  'November',
+  'Desember',
+];
+
+const now = new Date();
+const hari = hariIndonesia[now.getDay()];
+const tanggal = now.getDate();
+const bulan = bulanIndonesia[now.getMonth()];
+const tahun = now.getFullYear();
+
+const tanggalLengkap = `${hari} ${tanggal} ${bulan} ${tahun}`;

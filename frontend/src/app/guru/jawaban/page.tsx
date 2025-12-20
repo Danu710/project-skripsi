@@ -86,7 +86,7 @@ export default function JawabanPage() {
                   <strong>Jurusan : {item.Siswa?.jurusan ?? 'Unknown'}</strong>
                 </p>
 
-                <p className='flex flex-row justify-start gap-5'>
+                <p className='flex flex-row justify-start gap-3'>
                   <strong>Soal:</strong>{' '}
                   {item.Soal?.pertanyaan ?? 'Tidak ada data soal'}
                   <strong>Ujian:</strong>{' '}
@@ -95,18 +95,6 @@ export default function JawabanPage() {
                 </p>
                 <p>
                   <strong>Jawaban Siswa:</strong> {item.jawaban_text}
-                </p>
-
-                <p>
-                  <strong>Status:</strong>{' '}
-                  <span
-                    className={
-                      item.status === 'benar'
-                        ? 'text-green-600 font-bold'
-                        : 'text-red-600 font-bold'
-                    }>
-                    {item.status}
-                  </span>
                 </p>
 
                 <p>
